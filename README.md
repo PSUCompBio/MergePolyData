@@ -5,7 +5,7 @@ Merge multiple VTK files into a single VTK file with multiple parts
 1) cd MergePolyData
 2) mkdir build 
 3) cd build
-4) ccmake ..
+4) ccmake ../
 5) You might need to supply cmake the path to your VTK build directory
 
 ## To use, at the command prompt:
