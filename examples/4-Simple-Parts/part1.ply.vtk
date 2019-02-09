@@ -1,0 +1,19 @@
+# vtk DataFile Version 2.0
+part1.ply, Created by Gmsh
+ASCII
+DATASET UNSTRUCTURED_GRID
+POINTS 8 double
+-1 -1 -1
+-1 -1 1
+-1 1 1
+-1 1 -1
+1 1 1
+1 1 -1
+1 -1 1
+1 -1 -1
+
+CELLS 1 9
+8 1 2 4 6 0 3 5 7
+
+CELL_TYPES 1
+12
