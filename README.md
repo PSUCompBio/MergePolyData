@@ -2,6 +2,7 @@
 Merge multiple VTK files into a single VTK file with multiple parts
 
 ## To compile:
+0) First you need VTK. Here are instructions on that: https://psucompbio.gitbook.io/femtech/external-programs/vtk
 1) cd MergePolyData
 2) mkdir build 
 3) cd build
