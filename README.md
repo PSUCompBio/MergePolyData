@@ -11,3 +11,6 @@ Merge multiple VTK files into a single VTK file with multiple parts
 
 ## To use, at the command prompt:
 MergePolyData.exe -in file1.vtk file2.vtk -out file12.vtk
+
+## To also export as ABAQUS .inp file
+MergePolyData.exe -in file1.vtk file2.vtk -out file12.vtk -abaqus

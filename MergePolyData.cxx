@@ -78,7 +78,7 @@ void ExportAsAbaqusFile(vtkSmartPointer<vtkUnstructuredGrid> ipGrid, vtkSmartPoi
 			ipGrid->GetCellPoints(i, cellPointIds);
 			// Only for Element with 8 nodes 
 			assert( cellPointIds->GetNumberOfIds() == 8); 
-			file << i+1 << ", " << cellPointIds->GetId(0) << ", " << cellPointIds->GetId(1) << ", " << cellPointIds->GetId(2) << ", " << cellPointIds->GetId(3) << ", " << cellPointIds->GetId(4) << ", " << cellPointIds->GetId(5) << ", " << cellPointIds->GetId(6) << ", " << cellPointIds->GetId(7) << std::endl;
+			file << i+1 << ", " << cellPointIds->GetId(0) + 1 << ", " << cellPointIds->GetId(1) + 1 << ", " << cellPointIds->GetId(2) + 1 << ", " << cellPointIds->GetId(3) + 1 << ", " << cellPointIds->GetId(4) + 1 << ", " << cellPointIds->GetId(5) + 1 << ", " << cellPointIds->GetId(6) + 1 << ", " << cellPointIds->GetId(7) + 1 << std::endl;
 		}
 		currentCell = pCellCounts->GetId(set);
 	}
