@@ -51,12 +51,47 @@ void AddAttributeToCells(vtkSmartPointer<vtkUnstructuredGrid> pGrid, vtkSmartPoi
 	pGrid->GetCellData()->SetScalars(indexArray);
 }
 
+void ExportAsAbaqusFile(vtkSmartPointer<vtkUnstructuredGrid> ipGrid, vtkSmartPointer<vtkIdList> pCellCounts, std::string filePath)
+{
+	std::ofstream file;
+	file.open(filePath);
+	file << "*************************************\n";
+	file << "*HEADING\n";
+	file << "FemTech\n";
+	file << "*************************************\n";
+	file << "*NODE, NSET=All\n";
+	for (int i = 0; i < ipGrid->GetNumberOfPoints(); i++)
+	{
+		double pnt[3];
+		ipGrid->GetPoint(i, pnt);
+		file << i + 1 << ",  " << pnt[0] << ",  " << pnt[1] << ",  " << pnt[2]<<"\n";
+	}
+	int currentCell = 0;
+	int nSet = pCellCounts->GetNumberOfIds();
+	for (int set = 0; set < nSet; set++)
+	{
+		file << "*ELEMENT,TYPE=C3D8,ELSET=PART_" << set+1 << std::endl;
+		int ncell = pCellCounts->GetId(set);
+		for (int i = currentCell; i < pCellCounts->GetId(set); i++)
+		{
+			vtkSmartPointer<vtkIdList> cellPointIds = vtkSmartPointer<vtkIdList>::New();
+			ipGrid->GetCellPoints(i, cellPointIds);
+			// Only for Element with 8 nodes 
+			assert( cellPointIds->GetNumberOfIds() == 8); 
+			file << i+1 << ", " << cellPointIds->GetId(0) + 1 << ", " << cellPointIds->GetId(1) + 1 << ", " << cellPointIds->GetId(2) + 1 << ", " << cellPointIds->GetId(3) + 1 << ", " << cellPointIds->GetId(4) + 1 << ", " << cellPointIds->GetId(5) + 1 << ", " << cellPointIds->GetId(6) + 1 << ", " << cellPointIds->GetId(7) + 1 << std::endl;
+		}
+		currentCell = pCellCounts->GetId(set);
+	}
+	file.close();
+}
+
 int main(int argc, char *argv[])
 {
 	std::vector<std::string> inputFiles;
 	std::string outFile;
 	bool isInputs = false;
     bool isOutput = false;
+	bool writeinp = false;
 
     for (int i = 1; i < argc; ++i) 
     {
@@ -70,6 +105,10 @@ int main(int argc, char *argv[])
             isInputs = false;
             isOutput = true;
         }
+		else if (strcmp(argv[i], "-abaqus") == 0)
+		{
+			writeinp = true;
+		}
         else
         {
             if (isInputs)
@@ -123,4 +162,10 @@ int main(int argc, char *argv[])
 	writter->Write();
 	std::cout << "Written to : " << outFile<< std::endl;
 
+	if (writeinp)
+	{
+		std::string abaqusFilename = outFile.substr(0, outFile.find_last_of('.')) + ".inp";
+		ExportAsAbaqusFile(pMergedGrid, pCellCounts, abaqusFilename);
+		std::cout << "Written Abaqus inp file : " << abaqusFilename << std::endl;
+	}
 }
