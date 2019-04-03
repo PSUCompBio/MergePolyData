@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <map>
+#include <set>
 #include <algorithm>
 
 #include <vtkUnstructuredGrid.h>
@@ -10,9 +11,12 @@
 #include <vtkCellData.h>
 #include <vtkCellArray.h>
 #include <vtkIntArray.h>
+#include <vtkCleanPolyData.h>
 #include <vtkCleanUnstructuredGrid.h>
+#include <vtkCleanUnstructuredGridCells.h>
 #include <vtkSmartPointer.h>
 #include <vtkPLYReader.h>
+#include <vtkMeshQuality.h>
 #include <vtkPolyData.h>
 #include <vtkIdList.h>
 #include <vtkMath.h>
@@ -21,11 +25,36 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
 #include <vtkProperty.h>
+#include <vtkDataSetMapper.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 
+struct Hexa
+{
+	Hexa(std::vector<vtkIdType> cell1Ids, std::vector<vtkIdType> cell2Ids)
+	{
+		cellIds = cell1Ids;
+		cellIds.insert(cellIds.end(), cell2Ids.begin(), cell2Ids.end());
+	}
+
+	std::vector<vtkIdType> cellIds;
+
+	/*inline bool operator==(Hexa aHex)
+	{
+		std::vector<vtkIdType> cells1 = cellIds;
+		std::vector<vtkIdType> cells2 = aHex.cellIds;
+
+		std::sort(cells1.begin(), cells1.end());
+		std::sort(cells2.begin(), cells2.end());
+
+		std::vector<vtkIdType> diff;
+		std::set_difference(cells1.begin(), cells1.end(), cells2.begin(), cells2.end(), std::back_inserter(diff));
+
+		return diff.size() > 0 ? false : true;
+	}*/
+};
 
 double* GetCellNormal(vtkSmartPointer<vtkPolyData> polyData, std::vector<vtkIdType> cellPoints)
 {
@@ -37,7 +66,7 @@ double* GetCellNormal(vtkSmartPointer<vtkPolyData> polyData, std::vector<vtkIdTy
 		vtkIdType id2 = cellPoints[1];
 		vtkIdType id3 = cellPoints[nPnts - 1];
 
-		double pnt1[3], pnt2[3], pnt3[3], vec1[3],vec2[3];
+		double pnt1[3], pnt2[3], pnt3[3], vec1[3], vec2[3];
 		polyData->GetPoint(id1, pnt1);
 		polyData->GetPoint(id2, pnt2);
 		polyData->GetPoint(id3, pnt3);
@@ -101,7 +130,7 @@ vtkSmartPointer<vtkActor> GetCellActor(vtkSmartPointer<vtkPolyData> polyData, st
 		vtkSmartPointer<vtkPolyDataMapper> mapper =
 			vtkSmartPointer<vtkPolyDataMapper>::New();
 		mapper->SetInputData(polygonPolyData);
-		vtkSmartPointer<vtkActor> actor =	vtkSmartPointer<vtkActor>::New();
+		vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
 		actor->SetMapper(mapper);
 		actor->GetProperty()->SetColor(0.0, 0.0, 1.0);
 		actor->GetProperty()->SetLineWidth(3.0);
@@ -137,6 +166,39 @@ void Visualize(vtkSmartPointer<vtkPolyData> pData, std::vector<vtkSmartPointer<v
 	}
 	renderer->SetBackground(0.1804, 0.5451, 0.3412); // Sea green
 
+	renderWindow->Render();
+	vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
+		vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New(); //like paraview
+
+	renderWindowInteractor->SetInteractorStyle(style);
+	renderWindowInteractor->Start();
+}
+
+void VisualizeUnstructedGrid(vtkSmartPointer<vtkUnstructuredGrid> ug)
+{
+	// Create a mapper and actor
+	vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+	mapper->SetInputData(ug);
+
+	vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+	actor1->SetMapper(mapper);
+
+	// Create a renderer, render window, and interactor
+	vtkSmartPointer<vtkRenderer> renderer =
+		vtkSmartPointer<vtkRenderer>::New();
+	vtkSmartPointer<vtkRenderWindow> renderWindow =
+		vtkSmartPointer<vtkRenderWindow>::New();
+	renderWindow->AddRenderer(renderer);
+	vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+		vtkSmartPointer<vtkRenderWindowInteractor>::New();
+	renderWindowInteractor->SetRenderWindow(renderWindow);
+
+	// Add the actor to the scene
+	actor1->GetProperty()->SetEdgeVisibility(true);
+	renderer->AddActor(actor1);
+	renderer->SetBackground(.3, .6, .3); // Background color green
+
+	// Render and interact
 	renderWindow->Render();
 	vtkSmartPointer<vtkInteractorStyleTrackballCamera> style =
 		vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New(); //like paraview
@@ -191,7 +253,7 @@ std::vector<vtkIdType> GetCellPointIds(vtkSmartPointer<vtkPolyData> pData, vtkId
 int GetConnectedCells(vtkSmartPointer<vtkPolyData> pData, vtkIdType cellId, std::vector<vtkIdType> faces)
 {
 	std::vector<std::vector<vtkIdType>> allcellNeighbours;
-	for (auto it: faces)
+	for (auto it : faces)
 	{
 		std::vector<vtkIdType> cellNeighbours = GetNeighbours(pData, it);
 		cellNeighbours.push_back(it);
@@ -265,16 +327,134 @@ vtkIdType FindCommonCell(std::vector<std::vector<vtkIdType>> Cells)
 	return intersect[0];
 }
 
+static int DumpQualityStats(vtkMeshQuality* iq, const char *arrayname)
+{
+	cout << "  cardinality: "
+		<< iq->GetOutput()->GetFieldData()->GetArray(arrayname)->GetComponent(0, 4)
+		<< "  , range: "
+		<< iq->GetOutput()->GetFieldData()->GetArray(arrayname)->GetComponent(0, 0)
+		<< "  -  "
+		<< iq->GetOutput()->GetFieldData()->GetArray(arrayname)->GetComponent(0, 2)
+		<< endl;
+
+	cout << "  average: " << iq->GetOutput()->GetFieldData()->GetArray(arrayname)->GetComponent(0, 1)
+		<< "  , standard deviation: "
+		<< sqrt(fabs(iq->GetOutput()->GetFieldData()->GetArray(arrayname)->GetComponent(0, 3)))
+		<< endl;
+
+	return 0;
+}
+
+vtkSmartPointer<vtkUnstructuredGrid> BuildHexElements(vtkSmartPointer<vtkPolyData> pData, std::vector<std::pair<vtkIdType, vtkIdType>> cellPairs)
+{
+	vtkSmartPointer<vtkPoints> pPoints = pData->GetPoints();
+	vtkSmartPointer<vtkUnstructuredGrid> ug = vtkSmartPointer<vtkUnstructuredGrid>::New();
+	ug->SetPoints(pPoints);
+	vtkIdType cellId = 0;
+	vtkSmartPointer<vtkIdList> ids = vtkSmartPointer<vtkIdList>::New();
+	for (auto it : cellPairs)
+	{
+		std::vector<vtkIdType> c1Points = GetCellPointIds(pData, it.first);
+		std::vector<vtkIdType> c2Points = GetCellPointIds(pData, it.second);
+
+		std::vector<vtkIdType> set1{ c1Points[0],c2Points[0],c1Points[1] };
+		std::vector<vtkIdType> set2{ c1Points[1],c2Points[1],c2Points[0] };
+		double* c1Normal = GetCellNormal(pData, set1);
+		double* c2Normal = GetCellNormal(pData, set2);
+
+		vtkIdType c2Start = 0;
+		double dotProd = (vtkMath::Dot(c1Normal, c2Normal));
+		//cout << "Cell " << cellId << "\t" << dotProd << endl;
+		if (dotProd > 0.0)
+		{
+			//Try rotating back
+			set1 = { c1Points[0],c2Points[3],c1Points[1] };
+			set2 = { c1Points[1],c2Points[0],c2Points[3] };
+			c1Normal = GetCellNormal(pData, set1);
+			c2Normal = GetCellNormal(pData, set2);
+			c2Start = 3;
+
+			dotProd = (vtkMath::Dot(c1Normal, c2Normal));
+			//cout << "Again Cell " << cellId << "\t" << dotProd << endl;
+			if (dotProd > 0.0)
+			{
+				//Try rotating front
+				set1 = { c1Points[0],c2Points[1],c1Points[1] };
+				set2 = { c1Points[1],c2Points[2],c2Points[1] };
+				c1Normal = GetCellNormal(pData, set1);
+				c2Normal = GetCellNormal(pData, set2);
+				c2Start = 1;
+
+				dotProd = (vtkMath::Dot(c1Normal, c2Normal));
+				//cout << "Again again Cell " << cellId << "\t" << dotProd << endl;
+				//if (dotProd > 0.0)
+				//	cout << "Catch it\n";
+			}
+		}
+
+		//double dotProd = vtkMath::Dot(c1Normal, c2Normal);
+		//cout << "Dot Product " << dotProd << endl;
+
+		for (auto p1it : c1Points)
+		{
+			ids->InsertNextId(p1it);
+		}
+
+		for (int p = 0; p < c2Points.size(); p++)
+		{
+			vtkIdType index = (p + c2Start) % c2Points.size();
+			ids->InsertNextId(c2Points[index]);
+		}
+
+		ug->InsertNextCell(VTK_HEXAHEDRON, ids.GetPointer());
+		ids->Reset();
+
+		//vtkCell* aCell = ug->GetCell(cellId);
+		//std::cout << "Cell " << cellId << std::endl;
+		//std::cout<<"Scaled Jacobian " << vtkMeshQuality::HexScaledJacobian(aCell) <<"\t"<<"Disortion "<< vtkMeshQuality::HexDistortion(aCell)<<"\t" << "Shape " << vtkMeshQuality::HexShape(aCell) <<"\t" << "Shear " << vtkMeshQuality::HexShear(aCell) << "\t" << "Volume " << vtkMeshQuality::HexVolume(aCell) << std::endl;
+		cellId++;
+	}
+
+	//vtkSmartPointer<vtkCleanUnstructuredGridCells> cleaner = vtkSmartPointer<vtkCleanUnstructuredGridCells>::New();
+	//cleaner->SetInputData(ug);
+	//cleaner->Update();
+	//ug = cleaner->GetOutput();
+
+	//for (int c = 0; c < ug->GetNumberOfCells(); c++)
+	//{
+	//	vtkCell* aCell = ug->GetCell(c);
+	//	std::cout << "Cell " << c << std::endl;
+	//	std::cout<<"Scaled Jacobian " << vtkMeshQuality::HexScaledJacobian(aCell) <<"\t"<<"Disortion "<< vtkMeshQuality::HexDistortion(aCell)<<"\t" << "Shape " << vtkMeshQuality::HexShape(aCell) <<"\t" << "Shear " << vtkMeshQuality::HexShear(aCell) << "\t" << "Volume " << vtkMeshQuality::HexVolume(aCell) << std::endl;
+	//}
+
+	/*vtkMeshQuality* iq = vtkMeshQuality::New();
+	iq->SetInputData(ug);
+	iq->SetHexQualityMeasureToDistortion();
+	iq->SaveCellQualityOn();
+	iq->Update();
+
+	std::cout << " Distortion:" << endl;
+	DumpQualityStats(iq, "Mesh Hexahedron Quality");
+	std::cout << endl;*/
+
+	return ug;
+}
 
 int main(int argc, char *argv[])
 {
 	//std::string inputFilename = argv[1];
-	std::string inputFilename = "E://projects//current//RubenCraft//Quad2Hex//Layer.ply";
+	//std::string inputFilename = "E://projects//current//RubenCraft//files//quad2hex//chank.ply";
+	std::string inputFilename = "E://projects//current//RubenCraft//files//quad2hex//Layer.ply";
 	vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
 	reader->SetFileName(inputFilename.c_str());
 	reader->Update();
-
 	vtkSmartPointer<vtkPolyData> pData = reader->GetOutput();
+
+	//vtkSmartPointer<vtkCleanPolyData> polyCleaner = vtkSmartPointer<vtkCleanPolyData>::New();
+	//polyCleaner->SetInputConnection(reader->GetOutputPort());
+	//polyCleaner->Update();
+
+	//vtkSmartPointer<vtkPolyData> pData = polyCleaner->GetOutput();
 	vtkSmartPointer<vtkCellData> pCellData = pData->GetCellData();
 
 	vtkIdType nCells = pData->GetNumberOfCells();
@@ -284,8 +464,16 @@ int main(int argc, char *argv[])
 		cellIds.push_back(c);
 	}
 
-	for (vtkIdType cellId = 0; cellId < cellIds.size(); cellId++)
+	std::vector<std::pair<vtkIdType, vtkIdType>> facePair;
+	std::set<Hexa> hexElements;
+	std::vector<vtkIdType> selectedCells;
+	for (vtkIdType c = 0; c < cellIds.size(); c++)
 	{
+		vtkIdType cellId = cellIds[c];
+
+		if (std::find(selectedCells.begin(), selectedCells.end(), cellId) != selectedCells.end())
+			continue;
+
 		std::vector<vtkIdType> CijPointIds = GetCellPointIds(pData, cellId);
 		double* cellNormal = GetCellNormal(pData, CijPointIds);
 
@@ -330,6 +518,9 @@ int main(int argc, char *argv[])
 				if (c2 > -1)
 					break;
 			}
+			if (c2 == -1)
+				continue;
+
 			std::vector<vtkIdType> C2PointIds = GetCellPointIds(pData, c2);
 			filteredNeigh = neighbors;
 			filteredNeigh.erase(std::remove(filteredNeigh.begin(), filteredNeigh.end(), c2), filteredNeigh.end());
@@ -353,6 +544,9 @@ int main(int argc, char *argv[])
 				if (c3 > -1)
 					break;
 			}
+			if (c3 == -1)
+				continue;
+
 			std::vector<vtkIdType> C3PointIds = GetCellPointIds(pData, c3);
 			filteredNeigh = neighbors;
 			filteredNeigh.erase(std::remove(filteredNeigh.begin(), filteredNeigh.end(), c3), filteredNeigh.end());
@@ -376,6 +570,9 @@ int main(int argc, char *argv[])
 				if (c4 > -1)
 					break;
 			}
+			if (c4 == -1)
+				continue;
+
 			std::vector<vtkIdType> C4PointIds = GetCellPointIds(pData, c4);
 			filteredNeigh = neighbors;
 			filteredNeigh.erase(std::remove(filteredNeigh.begin(), filteredNeigh.end(), c4), filteredNeigh.end());
@@ -393,29 +590,55 @@ int main(int argc, char *argv[])
 
 			vtkIdType foundCell = FindCommonCell(allCellNeighs);
 
-			// remove cells to prevent duplication
-			for (auto it : allCells)
+			std::vector<vtkIdType> cell1Ids = GetCellPointIds(pData, cellId);
+			std::vector<vtkIdType> cell2Ids = GetCellPointIds(pData, foundCell);
+
+			//Hexa aHex(cell1Ids, cell2Ids);
+			//hexElements.insert(aHex);
+
+			 //remove cells to prevent duplication
+			if (allCells.size() != 4)
 			{
-				cellIds.erase(std::remove(cellIds.begin(), cellIds.end(), it), cellIds.end());
+				std::cout << "Error" << endl;
 			}
-			cellIds.erase(std::remove(cellIds.begin(), cellIds.end(), foundCell), cellIds.end());
 
-			std::vector<vtkSmartPointer<vtkActor>> actors;
-			auto act = GetCellActor(pData, CijPointIds);
-			act->GetProperty()->SetColor(1, 0, 0);
-			act->GetProperty()->SetLineWidth(3.0);
-			act->GetProperty()->EdgeVisibilityOn();
-			actors.push_back(act);
+			selectedCells.insert(selectedCells.end(), allCells.begin(), allCells.end());
+			selectedCells.push_back(cellId);
+			selectedCells.push_back(foundCell);
 
-			auto foundAct = GetCellActor(pData, GetCellPointIds(pData, foundCell));
-			foundAct->GetProperty()->SetColor(0, 0, 1);
-			foundAct->GetProperty()->SetLineWidth(3.0);
-			foundAct->GetProperty()->EdgeVisibilityOn();
-			actors.push_back(foundAct);
+			//std::vector<vtkSmartPointer<vtkActor>> actors;
+			//auto act = GetCellActor(pData, CijPointIds);
+			//act->GetProperty()->SetColor(1, 0, 0);
+			//act->GetProperty()->SetLineWidth(3.0);
+			//act->GetProperty()->EdgeVisibilityOn();
+			//actors.push_back(act);
 
-			Visualize(pData, actors);
+			//auto foundAct = GetCellActor(pData, GetCellPointIds(pData, foundCell));
+			//foundAct->GetProperty()->SetColor(0, 0, 1);
+			//foundAct->GetProperty()->SetLineWidth(3.0);
+			//foundAct->GetProperty()->EdgeVisibilityOn();
+			//actors.push_back(foundAct);
+			//Visualize(pData, actors);
+
+			facePair.push_back(std::pair<vtkIdType, vtkIdType>(cellId, foundCell));
 			break;
-
 		}
 	}
+
+	vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, facePair);
+	vtkSmartPointer<vtkCleanUnstructuredGrid> gridCleaner = vtkSmartPointer<vtkCleanUnstructuredGrid>::New();
+	gridCleaner->AddInputData(ug);
+	gridCleaner->Update();
+
+	ug = gridCleaner->GetOutput();
+
+	//std::string outFile = "E://projects//current//RubenCraft//files//quad2hex//chank_Hex.vtk";
+	std::string outFile = "E://projects//current//RubenCraft//files//quad2hex//layer_Hex.vtk";
+	vtkSmartPointer<vtkUnstructuredGridWriter> writter = vtkSmartPointer<vtkUnstructuredGridWriter>::New();
+	writter->SetInputData(ug);
+	writter->SetFileName(outFile.c_str());
+	writter->Write();
+	std::cout << "Written to : " << outFile << std::endl;
+
+	VisualizeUnstructedGrid(ug);
 }
