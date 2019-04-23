@@ -12,8 +12,8 @@
 #include <vtkCellArray.h>
 #include <vtkIntArray.h>
 #include <vtkCleanPolyData.h>
-#include <vtkCleanUnstructuredGrid.h>
-#include <vtkCleanUnstructuredGridCells.h>
+//#include <vtkCleanUnstructuredGrid.h>
+//#include <vtkCleanUnstructuredGridCells.h>
 #include <vtkSmartPointer.h>
 #include <vtkPLYReader.h>
 #include <vtkMeshQuality.h>
@@ -442,9 +442,34 @@ vtkSmartPointer<vtkUnstructuredGrid> BuildHexElements(vtkSmartPointer<vtkPolyDat
 
 int main(int argc, char *argv[])
 {
-	//std::string inputFilename = argv[1];
-	//std::string inputFilename = "E://projects//current//RubenCraft//files//quad2hex//chank.ply";
-	std::string inputFilename = "E://projects//current//RubenCraft//files//quad2hex//Layer.ply";
+	bool isInput = false;
+    bool isOutput = false;
+	std::string inputFilename;
+	std::string outputFilename;
+	for (int i = 1; i < argc; ++i) 
+    {
+		if (strcmp(argv[i],"-in") == 0)
+        {
+			isInput = true;
+		}
+		else if(strcmp(argv[i],"-out") == 0)
+		{
+			isInput = false;
+			isOutput = true;
+		}
+		else
+		{
+			if (isInput)
+			{
+				inputFilename = argv[i];
+			}
+			else if (isOutput)
+			{
+				outputFilename = argv[i];
+			}
+		}
+	}
+	
 	vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
 	reader->SetFileName(inputFilename.c_str());
 	reader->Update();
@@ -626,19 +651,19 @@ int main(int argc, char *argv[])
 	}
 
 	vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, facePair);
-	vtkSmartPointer<vtkCleanUnstructuredGrid> gridCleaner = vtkSmartPointer<vtkCleanUnstructuredGrid>::New();
-	gridCleaner->AddInputData(ug);
-	gridCleaner->Update();
+	
+	//vtkSmartPointer<vtkCleanUnstructuredGrid> gridCleaner = vtkSmartPointer<vtkCleanUnstructuredGrid>::New();
+	//gridCleaner->AddInputData(ug);
+	//gridCleaner->Update();
+	// ug = gridCleaner->GetOutput();
+	// std::string outFile = "E://projects//current//RubenCraft//files//quad2hex//chank_Hex.vtk";
+	// std::string outFile = "E://projects//current//RubenCraft//files//quad2hex//layer_Hex.vtk";
 
-	ug = gridCleaner->GetOutput();
-
-	//std::string outFile = "E://projects//current//RubenCraft//files//quad2hex//chank_Hex.vtk";
-	std::string outFile = "E://projects//current//RubenCraft//files//quad2hex//layer_Hex.vtk";
 	vtkSmartPointer<vtkUnstructuredGridWriter> writter = vtkSmartPointer<vtkUnstructuredGridWriter>::New();
 	writter->SetInputData(ug);
-	writter->SetFileName(outFile.c_str());
+	writter->SetFileName(outputFilename.c_str());
 	writter->Write();
-	std::cout << "Written to : " << outFile << std::endl;
+	std::cout << "Written to : " << outputFilename << std::endl;
 
-	VisualizeUnstructedGrid(ug);
+	//VisualizeUnstructedGrid(ug);
 }
