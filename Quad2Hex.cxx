@@ -136,6 +136,19 @@ vtkIdType FindCommonCell(std::vector<std::vector<vtkIdType>> Cells)
 	return intersect[0];
 }
 
+vtkSmartPointer<vtkUnstructuredGrid> BuildHexElements(vtkSmartPointer<vtkPolyData> pData, std::vector<vtkSmartPointer<vtkIdList>> idLists)
+{
+	vtkSmartPointer<vtkPoints> pPoints = pData->GetPoints();
+	vtkSmartPointer<vtkUnstructuredGrid> ug = vtkSmartPointer<vtkUnstructuredGrid>::New();
+	ug->SetPoints(pPoints);
+
+	for (auto it : idLists)
+	{
+		ug->InsertNextCell(VTK_HEXAHEDRON, it.GetPointer());
+	}
+	return ug;
+}
+
 vtkSmartPointer<vtkUnstructuredGrid> BuildHexElements(vtkSmartPointer<vtkPolyData> pData, std::vector<std::pair<vtkIdType, vtkIdType>> cellPairs)
 {
 	vtkSmartPointer<vtkPoints> pPoints = pData->GetPoints();
@@ -201,6 +214,32 @@ vtkSmartPointer<vtkUnstructuredGrid> BuildHexElements(vtkSmartPointer<vtkPolyDat
 	return ug;
 }
 
+vtkIdType FindOppositeCellPointId(std::vector<std::vector<vtkIdType>> allCellPointIds, vtkIdType seedPointId)
+{
+	std::vector<std::vector<vtkIdType>> aNeighCellsPointIds;
+	for(auto it: allCellPointIds)
+	{
+		if (std::find(it.begin(), it.end(), seedPointId) != it.end())
+		{
+			aNeighCellsPointIds.push_back(it);
+		}
+	}
+	std::sort(aNeighCellsPointIds[0].begin(), aNeighCellsPointIds[0].end());
+	std::sort(aNeighCellsPointIds[1].begin(), aNeighCellsPointIds[1].end());
+
+	std::vector<vtkIdType> inter;
+	std::set_intersection(aNeighCellsPointIds[0].begin(), aNeighCellsPointIds[0].end(), aNeighCellsPointIds[1].begin(), aNeighCellsPointIds[1].end(),
+	std::back_inserter(inter));
+	inter.erase(std::remove(inter.begin(), inter.end(), seedPointId), inter.end());
+
+	if (inter.size() > 1)
+	{
+	std::cout<<"Error : Couldnt find the Opposite cell point\n";
+	}
+
+	return inter[0];
+}
+
 int main(int argc, char *argv[])
 {
 	bool isInput = false;
@@ -244,7 +283,9 @@ int main(int argc, char *argv[])
 		cellIds.push_back(c);
 	}
 
+	std::cout<<"Number of cells "<<nCells<<"\n";
 	std::vector<std::pair<vtkIdType, vtkIdType>> facePair;
+	std::vector<vtkSmartPointer<vtkIdList>> hexIdLists;
 	std::vector<vtkIdType> selectedCells;
 	for (vtkIdType c = 0; c < cellIds.size(); c++)
 	{
@@ -367,24 +408,33 @@ int main(int argc, char *argv[])
 			vtkIdType foundCell = FindCommonCell(allCellNeighs);
 
 			std::vector<vtkIdType> cell1Ids = GetCellPointIds(pData, cellId);
-			std::vector<vtkIdType> cell2Ids = GetCellPointIds(pData, foundCell);
+			// std::vector<vtkIdType> cell2Ids = GetCellPointIds(pData, foundCell);
+			std::vector<std::vector<vtkIdType>> allCellPointIds = { C1PointIds, C2PointIds, C3PointIds, C4PointIds };
 
-			 //remove cells to prevent duplication
-			if (allCells.size() != 4)
+			vtkSmartPointer<vtkIdList> idList = vtkSmartPointer<vtkIdList>::New();
+			for(int i=0; i<cell1Ids.size(); i++)
 			{
-				std::cout << "Error" << endl;
+				idList->InsertNextId(cell1Ids[i]);
 			}
-
+			for(int i=0; i<cell1Ids.size(); i++)
+			{
+				vtkIdType oppPointId = FindOppositeCellPointId(allCellPointIds, cell1Ids[i]);
+				idList->InsertNextId(oppPointId);
+			}
+			
+			 //remove cells to prevent duplication
 			selectedCells.insert(selectedCells.end(), allCells.begin(), allCells.end());
 			selectedCells.push_back(cellId);
 			selectedCells.push_back(foundCell);
 
 			facePair.push_back(std::pair<vtkIdType, vtkIdType>(cellId, foundCell));
+			hexIdLists.push_back(idList);
 			break;
 		}
 	}
 
-	vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, facePair);
+	// vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, facePair);
+	vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, hexIdLists);
 
 	// Write to out file
 	vtkSmartPointer<vtkUnstructuredGridWriter> writter = vtkSmartPointer<vtkUnstructuredGridWriter>::New();
