@@ -4,6 +4,9 @@ Merge multiple VTK files into a single VTK file with multiple parts
 # ImageCapture
 Capture .ply mesh file with texture as png image
 
+# Quad2Hex
+Convert .ply mesh file with <b>Quad</b> elements to .vtk mesh file with <b>Hexahedron</b> elements
+
 # To compile:
 0) First you need VTK. Here are instructions on that: https://psucompbio.gitbook.io/femtech/external-programs/vtk
 1) cd MergePolyData
@@ -21,3 +24,8 @@ MergePolyData.exe -in file1.vtk file2.vtk -out file12.vtk -abaqus
 ImageCapture.exe FileName(.ply)  ImageName(.jpg/.png)  outputImage(.png)  magnification(optional)
 ### Example
 ImageCapture.exe model.ply  model.jpg  captureImage.png
+
+## To use Quad2Hex, at the command prompt:
+Quad2Hex.exe -in QuadFile(.ply) -out HexFile(.vtk)
+### Example
+Quad2Hex.exe -in chank.ply -out chank_Hex.vtk
