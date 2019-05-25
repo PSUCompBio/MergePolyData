@@ -149,71 +149,6 @@ vtkSmartPointer<vtkUnstructuredGrid> BuildHexElements(vtkSmartPointer<vtkPolyDat
 	return ug;
 }
 
-vtkSmartPointer<vtkUnstructuredGrid> BuildHexElements(vtkSmartPointer<vtkPolyData> pData, std::vector<std::pair<vtkIdType, vtkIdType>> cellPairs)
-{
-	vtkSmartPointer<vtkPoints> pPoints = pData->GetPoints();
-	vtkSmartPointer<vtkUnstructuredGrid> ug = vtkSmartPointer<vtkUnstructuredGrid>::New();
-	ug->SetPoints(pPoints);
-	vtkIdType cellId = 0;
-	vtkSmartPointer<vtkIdList> ids = vtkSmartPointer<vtkIdList>::New();
-	for (auto it : cellPairs)
-	{
-		std::vector<vtkIdType> c1Points = GetCellPointIds(pData, it.first);
-		std::vector<vtkIdType> c2Points = GetCellPointIds(pData, it.second);
-
-		std::vector<vtkIdType> set1{ c1Points[0],c2Points[0],c1Points[1] };
-		std::vector<vtkIdType> set2{ c1Points[1],c2Points[1],c2Points[0] };
-		double* c1Normal = GetCellNormal(pData, set1);
-		double* c2Normal = GetCellNormal(pData, set2);
-
-		vtkIdType c2Start = 0;
-		double dotProd = (vtkMath::Dot(c1Normal, c2Normal));
-		if (dotProd > 0.0)
-		{
-			//Try rotating back
-			set1 = { c1Points[0],c2Points[3],c1Points[1] };
-			set2 = { c1Points[1],c2Points[0],c2Points[3] };
-			c1Normal = GetCellNormal(pData, set1);
-			c2Normal = GetCellNormal(pData, set2);
-			c2Start = 3;
-
-			dotProd = (vtkMath::Dot(c1Normal, c2Normal));
-			if (dotProd > 0.0)
-			{
-				//Try rotating front
-				set1 = { c1Points[0],c2Points[1],c1Points[1] };
-				set2 = { c1Points[1],c2Points[2],c2Points[1] };
-				c1Normal = GetCellNormal(pData, set1);
-				c2Normal = GetCellNormal(pData, set2);
-				c2Start = 1;
-
-				dotProd = (vtkMath::Dot(c1Normal, c2Normal));
-			}
-		}
-
-		for (auto p1it : c1Points)
-		{
-			ids->InsertNextId(p1it);
-		}
-
-		for (int p = 0; p < c2Points.size(); p++)
-		{
-			vtkIdType index = (p + c2Start) % c2Points.size();
-			ids->InsertNextId(c2Points[index]);
-		}
-
-		ug->InsertNextCell(VTK_HEXAHEDRON, ids.GetPointer());
-		ids->Reset();
-
-		//vtkCell* aCell = ug->GetCell(cellId);
-		//std::cout << "Cell " << cellId << std::endl;
-		//std::cout<<"Scaled Jacobian " << vtkMeshQuality::HexScaledJacobian(aCell) <<"\t"<<"Disortion "<< vtkMeshQuality::HexDistortion(aCell)<<"\t" << "Shape " << vtkMeshQuality::HexShape(aCell) <<"\t" << "Shear " << vtkMeshQuality::HexShear(aCell) << "\t" << "Volume " << vtkMeshQuality::HexVolume(aCell) << std::endl;
-		cellId++;
-	}
-
-	return ug;
-}
-
 vtkIdType FindOppositeCellPointId(std::vector<std::vector<vtkIdType>> allCellPointIds, vtkIdType seedPointId)
 {
 	std::vector<std::vector<vtkIdType>> aNeighCellsPointIds;
@@ -433,7 +368,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, facePair);
 	vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, hexIdLists);
 
 	// Write to out file
