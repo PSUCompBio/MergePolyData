@@ -1,107 +1,154 @@
-#include "vtkPLYReader.h"
+#include <vector>
+#include <cstring>
 
-#include "vtkActor.h"
-#include "vtkPNGReader.h"
+#include <vtkActor.h>
+#include <vtkPolyData.h>
+#include <vtkSmartPointer.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkPLYReader.h>
 #include <vtkJPEGReader.h>
-#include "vtkPolyDataMapper.h"
-#include "vtkRenderer.h"
-#include "vtkRenderWindow.h"
-#include "vtkRenderWindowInteractor.h"
-#include "vtkRegressionTestImage.h"
-#include "vtkTestUtilities.h"
-#include "vtkTexture.h"
+#include <vtkProperty.h>
+#include <vtkImageReader2Factory.h>
+#include <vtkPointData.h>
+#include <vtkCellData.h>
+#include <vtkDataArray.h>
+#include <vtkFloatArray.h>
 
-int main ( int argc, char *argv[] )
+#include "tinyply.h"
+using namespace tinyply;
+
+struct uint3 { uint32_t v1, v2, v3; };
+struct float2 { float u, v; };
+struct float6 { float u1, v1, u2, v2, u3, v3; };
+
+std::vector<float2> readTexCoordsFromPLYFile(const std::string & filepath)
 {
-  // Read file name.
-  if (argc < 2)
+  
+  std::vector<uint3> faces;
+  std::map<int, float2> vertTexMap;
+	try
+	{
+		std::ifstream ss(filepath, std::ios::binary);
+		if (ss.fail()) throw std::runtime_error("failed to open " + filepath);
+
+		PlyFile file;
+		file.parse_header(ss);
+
+		std::shared_ptr<PlyData> pTexcoords, pFaces;
+
+    try { pFaces = file.request_properties_from_element("face", { "vertex_indices" }, 3); }
+		catch (const std::exception & e) { std::cerr << "tinyply exception: " << e.what() << std::endl; }
+
+		try { pTexcoords = file.request_properties_from_element("face", { "texcoord" }, 6); }
+		catch (const std::exception & e) { std::cerr << "tinyply exception: " << e.what() << std::endl; }
+
+		file.read(ss);
+		if (pTexcoords)
+    {
+			const size_t numTexsBytes = pTexcoords->buffer.size_bytes();
+			std::vector<float6> texCoords(pTexcoords->count);
+			std::memcpy(texCoords.data(), pTexcoords->buffer.get(), numTexsBytes);
+
+      if (pFaces)
+      {
+        const size_t numFacesBytes = pFaces->buffer.size_bytes();
+		  	faces.resize(pFaces->count);
+			  std::memcpy(faces.data(), pFaces->buffer.get(), numFacesBytes);
+
+        for(int f =0; f<faces.size(); f++)
+        {
+          uint3 verts = faces[f];
+          float6 texs = texCoords[f];
+          vertTexMap[verts.v1] = float2{texs.u1, texs.v1};
+          vertTexMap[verts.v2] = float2{texs.u2, texs.v2};
+          vertTexMap[verts.v3] = float2{texs.u3, texs.v3};
+        }
+      }
+		}
+	}
+	catch (const std::exception & e)
+	{
+		std::cerr << "Caught tinyply exception: " << e.what() << std::endl;
+	}
+
+  std::vector<float2> texscoords;
+  for(auto mit:vertTexMap)
   {
+    texscoords.push_back(mit.second);
+  }
+  faces.clear();
+  vertTexMap.clear();
+  std::cout<<"Size of Textures "<<texscoords.size()<<std::endl;
+  return texscoords;
+}
+
+int main(int argc, char *argv[]) {
+  if(argc != 3)
+  {
+    std::cout << "Usage: " << argv[0] << "  Filename(.ply)" <<"   ImageName(.jpg)"<<std::endl;
     return EXIT_FAILURE;
   }
-  std::string fn = "/media/vishnu/Local Disk/projects/current/RubenCraft/imageSave/";
-  std::string plyName = fn + argv[1];
-  std::string imageName = fn + argv[2];
-  std::cout<<"ply name : "<<plyName<<std::endl;
-  std::cout<<"image name : "<<imageName<<std::endl;
-  const char* fname = vtkTestUtilities::ExpandDataFileName(
-    argc, argv, plyName.c_str());
-  const char* fnameImg = vtkTestUtilities::ExpandDataFileName(
-    argc, argv, imageName.c_str());
 
-  // Test if the reader thinks it can open the file.
-//   if (0 == vtkPLYReader::CanReadFile(fname))
-//   {
-//     std::cout << "The PLY reader can not read the input file." << std::endl;
-//     return EXIT_FAILURE;
-//   }
+  //Read PLY file
+  std::string inputFilename = argv[1];
+  std::string inputImagename = argv[2];
 
-  // Create the reader.
-  vtkPLYReader* reader = vtkPLYReader::New();
-  reader->SetFileName(plyName.c_str());
-  reader->Update();
-//   delete [] fname;
+  vtkSmartPointer<vtkPLYReader> plyReader = vtkSmartPointer<vtkPLYReader>::New();
+  plyReader->SetFileName(inputFilename.c_str());
+  plyReader->Update();
 
-//   vtkPNGReader* readerImg = vtkPNGReader::New();
-//   if (0 == readerImg->CanReadFile(fnameImg))
-//   {
-//      std::cout << "The PNG reader can not read the input file." << std::endl;
-//      return EXIT_FAILURE;
-//   }
-//   readerImg->SetFileName(imageName.c_str());
-//   readerImg->Update();
-//   delete[] fnameImg;
+  vtkSmartPointer<vtkPolyData> polyData = plyReader->GetOutput();
 
-  vtkSmartPointer<vtkJPEGReader> jpegReader = vtkSmartPointer<vtkJPEGReader>::New();
-  jpegReader->SetFileName(imageName.c_str());
-  jpegReader->Update();
-
-  // Create the texture.
-  vtkTexture* texture = vtkTexture::New();
-//   texture->SetInputConnection(readerImg->GetOutputPort());
-  texture->SetInputConnection(jpegReader->GetOutputPort());
-  texture->InterpolateOn();
-
-  // Create a mapper.
-  vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
-  mapper->SetInputConnection(reader->GetOutputPort());
-  mapper->ScalarVisibilityOn();
-
-  // Create the actor.
-  vtkActor* actor = vtkActor::New();
-  actor->SetMapper(mapper);
-  actor->SetTexture(texture);
-
-
-  // Basic visualisation.
-  vtkRenderWindow* renWin = vtkRenderWindow::New();
-  vtkRenderer* ren = vtkRenderer::New();
-  renWin->AddRenderer(ren);
-  vtkRenderWindowInteractor *iren = vtkRenderWindowInteractor::New();
-  iren->SetRenderWindow(renWin);
-
-  ren->AddActor(actor);
-  ren->SetBackground(0.1,0.2,0.3);
-  renWin->SetSize(400,400);
-
-  // interact with data
-  renWin->Render();
-
-  int retVal = vtkRegressionTestImage( renWin );
-
-//   if ( retVal == vtkRegressionTester::DO_INTERACTOR)
+  vtkSmartPointer<vtkDataArray> texArray = polyData->GetPointData()->GetTCoords();
+  if (texArray == nullptr)
   {
-    iren->Start();
+    std::vector<float2> texCoords = readTexCoordsFromPLYFile(inputFilename);
+    vtkSmartPointer<vtkFloatArray> textureCoordinates = vtkSmartPointer<vtkFloatArray>::New();
+    textureCoordinates->SetNumberOfComponents(2);
+    textureCoordinates->SetName("TextureCoordinates");
+    
+    float tuple[2] = {0.0, 0.0};
+    for(auto tIt : texCoords)
+    {
+      tuple[0] = tIt.u; tuple[1] = tIt.v;
+      textureCoordinates->InsertNextTuple(tuple);
+    }
+    texCoords.clear();
+    
+    polyData->GetPointData()->SetTCoords(textureCoordinates);
   }
 
-  actor->Delete();
-  mapper->Delete();
-  reader->Delete();
-//   readerImg->Delete();
-//   jpegReader->Delete();
-//   texture->Delete();
-  renWin->Delete();
-  ren->Delete();
-  iren->Delete();
+  //read image
+  vtkSmartPointer<vtkImageReader2Factory> readerFactory =	vtkSmartPointer<vtkImageReader2Factory>::New();
+  vtkImageReader2 * imageReader = readerFactory->CreateImageReader2(inputImagename.c_str());
+  vtkSmartPointer<vtkImageReader2> smartImageReader;
+  smartImageReader.TakeReference(imageReader);
+  imageReader->SetFileName(inputImagename.c_str());
+  imageReader->Update();
+  vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+  texture->SetInputConnection(imageReader->GetOutputPort());
+  texture->Update();
 
-  return !retVal;
+  vtkSmartPointer<vtkPolyDataMapper> mapper =  vtkSmartPointer<vtkPolyDataMapper>::New();
+  mapper->SetInputConnection(plyReader->GetOutputPort());
+  mapper->ScalarVisibilityOn();
+
+  vtkSmartPointer<vtkActor> actor =  vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
+  actor->GetProperty()->SetTexture(vtkProperty::VTK_TEXTURE_UNIT_0, texture);
+
+  vtkSmartPointer<vtkRenderer> renderer =  vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renderWindow =  vtkSmartPointer<vtkRenderWindow>::New();
+	renderWindow->AddRenderer(renderer);
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+	renderWindowInteractor->SetRenderWindow(renderWindow);
+
+	renderer->AddActor(actor);
+	renderer->SetBackground(1, 1, 1);
+
+	renderWindow->Render();
+	renderWindowInteractor->Start();
 }

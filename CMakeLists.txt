@@ -9,8 +9,10 @@ include(${VTK_USE_FILE})
 include_directories(include)
 
 add_executable(MergePolyData MACOSX_BUNDLE include/vtkCleanUnstructuredGrid.h vtkCleanUnstructuredGrid.cxx MergePolyData.cxx )
+add_executable(ImageCapture MACOSX_BUNDLE include/tinyply.h  tinyply.cxx ImageCapture.cxx)
 
 file(COPY examples DESTINATION .)
 
 target_link_libraries(MergePolyData ${VTK_LIBRARIES})
+target_link_libraries(ImageCapture ${VTK_LIBRARIES})
 set(CMAKE_MSVCIDE_RUN_PATH ${VTK_RUNTIME_LIBRARY_DIRS})
