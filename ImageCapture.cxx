@@ -12,6 +12,9 @@
 #include <vtkJPEGReader.h>
 #include <vtkProperty.h>
 #include <vtkImageReader2Factory.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkCamera.h>
+#include <vtkPNGWriter.h>
 #include <vtkPointData.h>
 #include <vtkCellData.h>
 #include <vtkDataArray.h>
@@ -86,18 +89,22 @@ std::vector<float2> readTexCoordsFromPLYFile(const std::string & filepath)
 }
 
 int main(int argc, char *argv[]) {
-  if(argc != 3)
+  if(argc < 4 || argc > 5)
   {
-    std::cout << "Usage: " << argv[0] << "  Filename(.ply)" <<"   ImageName(.jpg)"<<std::endl;
+    std::cout << "Usage: " << argv[0] << "  FileName(.ply)" <<"   ImageName(.jpg/.png)"<<"   outputImage(.png)"<<"   magnification(optional)"<<std::endl;
     return EXIT_FAILURE;
   }
 
   //Read PLY file
-  std::string inputFilename = argv[1];
-  std::string inputImagename = argv[2];
+  std::string inputFileName = argv[1];
+  std::string inputImageName = argv[2];
+  std::string outputImageName = argv[3];
+  float magnification = 1.0;
+  if (argc == 5)
+    magnification = std::max(4.0,atof(argv[4]));
 
   vtkSmartPointer<vtkPLYReader> plyReader = vtkSmartPointer<vtkPLYReader>::New();
-  plyReader->SetFileName(inputFilename.c_str());
+  plyReader->SetFileName(inputFileName.c_str());
   plyReader->Update();
 
   vtkSmartPointer<vtkPolyData> polyData = plyReader->GetOutput();
@@ -105,7 +112,7 @@ int main(int argc, char *argv[]) {
   vtkSmartPointer<vtkDataArray> texArray = polyData->GetPointData()->GetTCoords();
   if (texArray == nullptr)
   {
-    std::vector<float2> texCoords = readTexCoordsFromPLYFile(inputFilename);
+    std::vector<float2> texCoords = readTexCoordsFromPLYFile(inputFileName);
     vtkSmartPointer<vtkFloatArray> textureCoordinates = vtkSmartPointer<vtkFloatArray>::New();
     textureCoordinates->SetNumberOfComponents(2);
     textureCoordinates->SetName("TextureCoordinates");
@@ -123,10 +130,10 @@ int main(int argc, char *argv[]) {
 
   //read image
   vtkSmartPointer<vtkImageReader2Factory> readerFactory =	vtkSmartPointer<vtkImageReader2Factory>::New();
-  vtkImageReader2 * imageReader = readerFactory->CreateImageReader2(inputImagename.c_str());
+  vtkImageReader2 * imageReader = readerFactory->CreateImageReader2(inputImageName.c_str());
   vtkSmartPointer<vtkImageReader2> smartImageReader;
   smartImageReader.TakeReference(imageReader);
-  imageReader->SetFileName(inputImagename.c_str());
+  imageReader->SetFileName(inputImageName.c_str());
   imageReader->Update();
   vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
   texture->SetInputConnection(imageReader->GetOutputPort());
@@ -142,6 +149,7 @@ int main(int argc, char *argv[]) {
 
   vtkSmartPointer<vtkRenderer> renderer =  vtkSmartPointer<vtkRenderer>::New();
   vtkSmartPointer<vtkRenderWindow> renderWindow =  vtkSmartPointer<vtkRenderWindow>::New();
+  renderWindow->SetOffScreenRendering(1);
 	renderWindow->AddRenderer(renderer);
   vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
 	renderWindowInteractor->SetRenderWindow(renderWindow);
@@ -149,6 +157,24 @@ int main(int argc, char *argv[]) {
 	renderer->AddActor(actor);
 	renderer->SetBackground(1, 1, 1);
 
+  vtkSmartPointer<vtkCamera> pCamera = renderer->GetActiveCamera();
+  pCamera->Azimuth(30);
+  pCamera->Elevation(15);
+  renderer->ResetCamera();
+  pCamera->Dolly(1.4);
+  pCamera->SetFocalPoint(0,0,0);
+
+  renderer->ResetCameraClippingRange();
+  float size = 300*magnification;
+  renderWindow->SetSize(size, size);
 	renderWindow->Render();
-	renderWindowInteractor->Start();
+  
+  vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter = vtkSmartPointer<vtkWindowToImageFilter>::New();
+  windowToImageFilter->SetInput(renderWindow);
+  windowToImageFilter->Update();
+  
+  vtkSmartPointer<vtkPNGWriter> writer = vtkSmartPointer<vtkPNGWriter>::New();
+  writer->SetFileName(outputImageName.c_str());
+  writer->SetInputConnection(windowToImageFilter->GetOutputPort());
+  writer->Write();
 }
