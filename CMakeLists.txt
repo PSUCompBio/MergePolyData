@@ -6,7 +6,7 @@ PROJECT(MergePolyData)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
-include_directories(include)
+#include_directories(include)
 
 add_executable(MergePolyData MACOSX_BUNDLE include/vtkCleanUnstructuredGrid.h vtkCleanUnstructuredGrid.cxx MergePolyData.cxx )
 add_executable(ImageCapture MACOSX_BUNDLE include/tinyply.h  tinyply.cxx ImageCapture.cxx)
