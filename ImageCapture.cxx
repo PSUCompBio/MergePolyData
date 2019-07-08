@@ -19,6 +19,7 @@
 #include <vtkCellData.h>
 #include <vtkDataArray.h>
 #include <vtkFloatArray.h>
+#include <vtkTexture.h>
 
 #include "tinyply.h"
 using namespace tinyply;
@@ -29,7 +30,7 @@ struct float6 { float u1, v1, u2, v2, u3, v3; };
 
 std::vector<float2> readTexCoordsFromPLYFile(const std::string & filepath)
 {
-  
+
   std::vector<uint3> faces;
   std::map<int, float2> vertTexMap;
 	try
@@ -116,7 +117,7 @@ int main(int argc, char *argv[]) {
     vtkSmartPointer<vtkFloatArray> textureCoordinates = vtkSmartPointer<vtkFloatArray>::New();
     textureCoordinates->SetNumberOfComponents(2);
     textureCoordinates->SetName("TextureCoordinates");
-    
+
     float tuple[2] = {0.0, 0.0};
     for(auto tIt : texCoords)
     {
@@ -124,7 +125,7 @@ int main(int argc, char *argv[]) {
       textureCoordinates->InsertNextTuple(tuple);
     }
     texCoords.clear();
-    
+
     polyData->GetPointData()->SetTCoords(textureCoordinates);
   }
 
@@ -144,8 +145,7 @@ int main(int argc, char *argv[]) {
   mapper->ScalarVisibilityOn();
 
   vtkSmartPointer<vtkActor> actor =  vtkSmartPointer<vtkActor>::New();
-  actor->SetMapper(mapper);
-  actor->GetProperty()->SetTexture(vtkProperty::VTK_TEXTURE_UNIT_0, texture);
+  actor->GetProperty()->SetTexture("normalTex", texture);
 
   vtkSmartPointer<vtkRenderer> renderer =  vtkSmartPointer<vtkRenderer>::New();
   vtkSmartPointer<vtkRenderWindow> renderWindow =  vtkSmartPointer<vtkRenderWindow>::New();
@@ -168,11 +168,11 @@ int main(int argc, char *argv[]) {
   float size = 300*magnification;
   renderWindow->SetSize(size, size);
 	renderWindow->Render();
-  
+
   vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter = vtkSmartPointer<vtkWindowToImageFilter>::New();
   windowToImageFilter->SetInput(renderWindow);
   windowToImageFilter->Update();
-  
+
   vtkSmartPointer<vtkPNGWriter> writer = vtkSmartPointer<vtkPNGWriter>::New();
   writer->SetFileName(outputImageName.c_str());
   writer->SetInputConnection(windowToImageFilter->GetOutputPort());
