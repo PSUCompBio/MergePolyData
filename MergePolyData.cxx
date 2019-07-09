@@ -8,9 +8,10 @@
 #include <vtkCellArray.h>
 #include <vtkIntArray.h>
 #include <vtkAppendFilter.h>
-#include <vtkCleanUnstructuredGrid.h>
 #include <vtkSmartPointer.h>
 #include <vtkDataSetMapper.h>
+
+#include "include/vtkCleanUnstructuredGrid.h"
 
 #define MERGE_TOL 1E-12
 

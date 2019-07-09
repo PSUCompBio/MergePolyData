@@ -1,6 +1,11 @@
 #include <vector>
 #include <cstring>
 
+#include "vtkAutoInit.h" 
+
+VTK_MODULE_INIT(vtkRenderingOpenGL2);
+VTK_MODULE_INIT(vtkInteractionStyle);
+
 #include <vtkActor.h>
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
@@ -21,7 +26,7 @@
 #include <vtkFloatArray.h>
 #include <vtkTexture.h>
 
-#include "tinyply.h"
+#include "include/tinyply.h"
 using namespace tinyply;
 
 struct uint3 { uint32_t v1, v2, v3; };
@@ -145,6 +150,7 @@ int main(int argc, char *argv[]) {
   mapper->ScalarVisibilityOn();
 
   vtkSmartPointer<vtkActor> actor =  vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
   actor->GetProperty()->SetTexture("normalTex", texture);
 
   vtkSmartPointer<vtkRenderer> renderer =  vtkSmartPointer<vtkRenderer>::New();
