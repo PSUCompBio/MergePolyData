@@ -2,7 +2,7 @@
 
 # Add file and the target file size below
 repo=MergePolyData-ImageWrite
-file="examples/ply-to-png/test.png"
+file="build/examples/ply-to-png/test.png"
 target_file_size=29279
 
 # You shoud not have to modify below
