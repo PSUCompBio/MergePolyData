@@ -22,8 +22,11 @@ MergePolyData.exe -in file1.vtk file2.vtk -out file12.vtk -abaqus
 
 ## To use ImageCapture, at the command prompt:
 ImageCapture.exe FileName(.ply)  ImageName(.jpg/.png)  outputImage(.png)  magnification(optional)
-### Example
-ImageCapture.exe model.ply  model.jpg  captureImage.png
+### Example on Linux (with X server)
+ImageCapture.exe model.ply  model.jpg  test.png
+
+### Example on AWS (without X server)
+xvfb-run ImageCapture.exe model.ply  model.jpg  test.png
 
 ## To use Quad2Hex, at the command prompt:
 Quad2Hex.exe -in QuadFile(.ply) -out HexFile(.vtk)
