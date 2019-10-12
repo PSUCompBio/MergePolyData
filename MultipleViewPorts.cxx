@@ -3,9 +3,9 @@
 #include <iostream>
 #include <sstream>
 
-#include "vtkAutoInit.h" 
+#include "vtkAutoInit.h"
 
-VTK_MODULE_INIT(vtkRenderingOpenGL2);
+VTK_MODULE_INIT(vtkRenderingOpenGL);
 VTK_MODULE_INIT(vtkInteractionStyle);
 
 #include <vtkActor.h>
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     std::string inputImageName = argv[2];
     std::string inputDatName = argv[3];
     std::string outputImageName = argv[4];
-    float magnification = 1.0;
+    float magnification = 2.0;
     if (argc == 6)
         magnification = std::max(4.0,atof(argv[5]));
 
