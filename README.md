@@ -7,7 +7,10 @@ Capture .ply mesh file with texture as png image
 # Quad2Hex
 Convert .ply mesh file with <b>Quad</b> elements to .vtk mesh file with <b>Hexahedron</b> elements
 
-# To compile :
+# MultipleViewPorts
+Create post-processing image from simulation data
+
+# To compile:
 0) First you need VTK. Here are instructions on that: https://psucompbio.gitbook.io/femtech/external-programs/vtk
 1) cd MergePolyData
 2) mkdir build
@@ -32,3 +35,8 @@ xvfb-run ImageCapture.exe model.ply  model.jpg  test.png
 Quad2Hex.exe -in QuadFile(.ply) -out HexFile(.vtk)
 ### Example
 Quad2Hex.exe -in chank.ply -out chank_Hex.vtk
+
+## To use MultipleViewPorts, at the command prompt:
+MultipleViewPorts meshFile(.ply) textureFile(.jpg/.png) datFile(.dat) outputImage(.jpg/.png) magnification(optional)
+### Example
+MultipleViewPorts brain3.ply Br_color3.jpg maxstrain.dat maxstrain.png
