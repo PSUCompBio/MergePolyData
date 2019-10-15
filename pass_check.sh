@@ -15,6 +15,11 @@ repo3=MergePolyData-ImageWrite
 file3="build/examples/ply-to-png/test.png"
 target_file_size3=29279
 
+# Add file 4 and the target file size below
+repo4=MergePolyData-MultiViewPorts
+file4="build/examples/multiViewPorts/test.png"
+target_file_size4=8000
+
 # You shoud not have to modify below
 #
 myfilesize1=$(wc -c <"$file1")
@@ -28,6 +33,10 @@ echo Target File2 Size = "$target_file_size2"
 myfilesize3=$(wc -c <"$file3")
 echo Acutal File3 Size = "$myfilesize3"
 echo Target File3 Size = "$target_file_size3"
+
+myfilesize4=$(wc -c <"$file4")
+echo Acutal File4 Size = "$myfilesize4"
+echo Target File4 Size = "$target_file_size4"
 
 if [ $myfilesize1 -ge $target_file_size1 ];then
         echo Passed!
@@ -65,6 +74,19 @@ else
         echo "Failed!" >> ~/$repo3.FAILED
         echo "Acutal File3 Size = "$myfilesize3" " >> ~/$repo3.FAILED
         echo "Target File3 Size = "$target_file_size3" " >> ~/$repo3.FAILED
+
+fi
+
+if [ $myfilesize4 -ge $target_file_size4 ];then
+        echo Passed!
+        echo "Passed" >> ~/$repo4.PASSED
+        echo "Acutal File4 Size = "$myfilesize4" " >> ~/$repo4.PASSED
+        echo "Target File4 Size = "$target_file_size4" " >> ~/$repo4.PASSED
+else
+        echo Failed!
+        echo "Failed!" >> ~/$repo4.FAILED
+        echo "Acutal File4 Size = "$myfilesize4" " >> ~/$repo4.FAILED
+        echo "Target File4 Size = "$target_file_size4" " >> ~/$repo4.FAILED
 
 fi
 
