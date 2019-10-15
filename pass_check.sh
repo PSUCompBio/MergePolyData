@@ -3,22 +3,22 @@
 # Add file 1 and the target file size below
 repo1=MergePolyData-Abaqus
 file1="build/examples/4-Simple-Parts/combined.inp"
-target_file_size1=10
+target_file_size1=1863
 
 # Add file 2 and the target file size below
 repo2=MergePolyData-Quad2Hex
 file2="build/examples/convert-Quad2Hex/chank_Hex.vtk"
-target_file_size2=10
+target_file_size2=2147
 
 # Add file 3 and the target file size below
 repo3=MergePolyData-ImageWrite
 file3="build/examples/ply-to-png/test.png"
-target_file_size3=29279
+target_file_size3=246898
 
 # Add file 4 and the target file size below
 repo4=MergePolyData-MultiViewPorts
-file4="build/examples/multiViewPorts/test.png"
-target_file_size4=8000
+file4="build/examples/multipleViewPorts/test.png"
+target_file_size4=324329
 
 # You shoud not have to modify below
 #
