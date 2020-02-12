@@ -2,9 +2,11 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <cstdlib>
+
+#include "json/json.h"
 
 #include "vtkAutoInit.h"
-
 VTK_MODULE_INIT(vtkRenderingOpenGL);
 VTK_MODULE_INIT(vtkInteractionStyle);
 
@@ -38,6 +40,8 @@ using namespace tinyply;
 struct uint3 { uint32_t v1, v2, v3; };
 struct float2 { float u, v; };
 struct float6 { float u1, v1, u2, v2, u3, v3; };
+
+Json::Value getConfig(const char* inputFile);
 
 std::vector<float2> readTexCoordsFromPLYFile(const std::string & filepath)
 {
@@ -81,7 +85,7 @@ int main(int argc, char *argv[]) {
 
     std::string inputFileName = argv[1];
     std::string inputImageName = argv[2];
-    std::string inputDatName = argv[3];
+    // std::string inputDatName = argv[3];
     std::string outputImageName = argv[4];
     float magnification = 2.0;
     if (argc == 6)
@@ -157,44 +161,80 @@ int main(int argc, char *argv[]) {
     }
 
     //dat file
-    std::ifstream datFile(inputDatName);
-    std::string line;
+    Json::Value outputJson = getConfig(argv[3]);
+    // std::ifstream datFile(inputDatName);
+    // std::string line;
     std::vector<vtkSmartPointer<vtkActor>> maxSpheres;
     std::vector<vtkSmartPointer<vtkActor>> minSpheres;
     float sphereRadius = (bounds[1] - bounds[0])/25.0;
-    while (std::getline(datFile, line))
-    {
-        std::istringstream iss(line);
-        float MaxStrain,MaxX,MaxY,MaxZ,MaxT,MinStrain,MinX,MinY,MinZ,MinT;
-        if ((iss >> MaxStrain >> MaxX >> MaxY >> MaxZ >> MaxT >> MinStrain >> MinX >> MinY >> MinZ >> MinT))
-        {
-            vtkSmartPointer<vtkSphereSource> maxSource = vtkSmartPointer<vtkSphereSource>::New();
-            maxSource->SetCenter(MaxX, MaxY, MaxZ);
-            maxSource->SetThetaResolution(64);
-            maxSource->SetPhiResolution(64);
-            maxSource->SetRadius(sphereRadius);
-            maxSource->Update();
-            vtkSmartPointer<vtkPolyDataMapper> maxMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-            maxMapper->SetInputData(maxSource->GetOutput());
-            vtkSmartPointer<vtkActor> maxActor = vtkSmartPointer<vtkActor>::New();
-            maxActor->SetMapper(maxMapper);
-            maxActor->GetProperty()->SetColor(1.0,0.0,0.0);
-            maxSpheres.push_back(maxActor);
 
-            vtkSmartPointer<vtkSphereSource> minSource = vtkSmartPointer<vtkSphereSource>::New();
-            minSource->SetCenter(MinX, MinY, MinZ);
-            minSource->SetThetaResolution(64);
-            minSource->SetPhiResolution(64);
-            minSource->SetRadius(sphereRadius);
-            minSource->Update();
-            vtkSmartPointer<vtkPolyDataMapper> minMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-            minMapper->SetInputData(minSource->GetOutput());
-            vtkSmartPointer<vtkActor> minActor = vtkSmartPointer<vtkActor>::New();
-            minActor->SetMapper(minMapper);
-            minActor->GetProperty()->SetColor(0.0,0.0,1.0);
-            minSpheres.push_back(minActor);
-        }
-    }
+    float MaxX, MaxY, MaxZ, MinX, MinY, MinZ;
+    MaxX = outputJson["principal-max-strain"]["location"][0].asDouble();
+    MaxY = outputJson["principal-max-strain"]["location"][1].asDouble();
+    MaxZ = outputJson["principal-max-strain"]["location"][2].asDouble();
+    MinX = outputJson["principal-min-strain"]["location"][0].asDouble();
+    MinY = outputJson["principal-min-strain"]["location"][1].asDouble();
+    MinZ = outputJson["principal-min-strain"]["location"][2].asDouble();
+
+    vtkSmartPointer<vtkSphereSource> maxSource = vtkSmartPointer<vtkSphereSource>::New();
+    maxSource->SetCenter(MaxX, MaxY, MaxZ);
+    maxSource->SetThetaResolution(64);
+    maxSource->SetPhiResolution(64);
+    maxSource->SetRadius(sphereRadius);
+    maxSource->Update();
+    vtkSmartPointer<vtkPolyDataMapper> maxMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    maxMapper->SetInputData(maxSource->GetOutput());
+    vtkSmartPointer<vtkActor> maxActor = vtkSmartPointer<vtkActor>::New();
+    maxActor->SetMapper(maxMapper);
+    maxActor->GetProperty()->SetColor(1.0,0.0,0.0);
+    maxSpheres.push_back(maxActor);
+
+    vtkSmartPointer<vtkSphereSource> minSource = vtkSmartPointer<vtkSphereSource>::New();
+    minSource->SetCenter(MinX, MinY, MinZ);
+    minSource->SetThetaResolution(64);
+    minSource->SetPhiResolution(64);
+    minSource->SetRadius(sphereRadius);
+    minSource->Update();
+    vtkSmartPointer<vtkPolyDataMapper> minMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    minMapper->SetInputData(minSource->GetOutput());
+    vtkSmartPointer<vtkActor> minActor = vtkSmartPointer<vtkActor>::New();
+    minActor->SetMapper(minMapper);
+    minActor->GetProperty()->SetColor(0.0,0.0,1.0);
+    minSpheres.push_back(minActor);
+
+    // while (std::getline(datFile, line))
+    // {
+    //     std::istringstream iss(line);
+    //     float MaxStrain,MaxX,MaxY,MaxZ,MaxT,MinStrain,MinX,MinY,MinZ,MinT;
+    //     if ((iss >> MaxStrain >> MaxX >> MaxY >> MaxZ >> MaxT >> MinStrain >> MinX >> MinY >> MinZ >> MinT))
+    //     {
+    //         vtkSmartPointer<vtkSphereSource> maxSource = vtkSmartPointer<vtkSphereSource>::New();
+    //         maxSource->SetCenter(MaxX, MaxY, MaxZ);
+    //         maxSource->SetThetaResolution(64);
+    //         maxSource->SetPhiResolution(64);
+    //         maxSource->SetRadius(sphereRadius);
+    //         maxSource->Update();
+    //         vtkSmartPointer<vtkPolyDataMapper> maxMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    //         maxMapper->SetInputData(maxSource->GetOutput());
+    //         vtkSmartPointer<vtkActor> maxActor = vtkSmartPointer<vtkActor>::New();
+    //         maxActor->SetMapper(maxMapper);
+    //         maxActor->GetProperty()->SetColor(1.0,0.0,0.0);
+    //         maxSpheres.push_back(maxActor);
+    //
+    //         vtkSmartPointer<vtkSphereSource> minSource = vtkSmartPointer<vtkSphereSource>::New();
+    //         minSource->SetCenter(MinX, MinY, MinZ);
+    //         minSource->SetThetaResolution(64);
+    //         minSource->SetPhiResolution(64);
+    //         minSource->SetRadius(sphereRadius);
+    //         minSource->Update();
+    //         vtkSmartPointer<vtkPolyDataMapper> minMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    //         minMapper->SetInputData(minSource->GetOutput());
+    //         vtkSmartPointer<vtkActor> minActor = vtkSmartPointer<vtkActor>::New();
+    //         minActor->SetMapper(minMapper);
+    //         minActor->GetProperty()->SetColor(0.0,0.0,1.0);
+    //         minSpheres.push_back(minActor);
+    //     }
+    // }
 
      // Define viewport ranges
     double xmins[4] = {0,.5,0,.5};
@@ -242,4 +282,22 @@ int main(int argc, char *argv[]) {
     writer->Write();
 
     return EXIT_SUCCESS;
+}
+
+Json::Value getConfig(const char* inputFile) {
+  Json::Value root;
+  std::ifstream ifs;
+  ifs.open(inputFile);
+  if (!ifs.is_open()) {
+    std::cout<<"ERROR : Failed to open configuration file" << std::endl;
+    exit(1);
+  }
+
+  Json::CharReaderBuilder builder;
+  JSONCPP_STRING errs;
+  if (!parseFromStream(builder, ifs, &root, &errs)) {
+    std::cout<<"ERROR : " << errs << std::endl;
+    exit(1);
+  }
+  return root;
 }
