@@ -162,8 +162,6 @@ int main(int argc, char *argv[]) {
 
     //dat file
     Json::Value outputJson = getConfig(argv[3]);
-    // std::ifstream datFile(inputDatName);
-    // std::string line;
     std::vector<vtkSmartPointer<vtkActor>> maxSpheres;
     std::vector<vtkSmartPointer<vtkActor>> minSpheres;
     float sphereRadius = (bounds[1] - bounds[0])/25.0;
@@ -202,47 +200,13 @@ int main(int argc, char *argv[]) {
     minActor->GetProperty()->SetColor(0.0,0.0,1.0);
     minSpheres.push_back(minActor);
 
-    // while (std::getline(datFile, line))
-    // {
-    //     std::istringstream iss(line);
-    //     float MaxStrain,MaxX,MaxY,MaxZ,MaxT,MinStrain,MinX,MinY,MinZ,MinT;
-    //     if ((iss >> MaxStrain >> MaxX >> MaxY >> MaxZ >> MaxT >> MinStrain >> MinX >> MinY >> MinZ >> MinT))
-    //     {
-    //         vtkSmartPointer<vtkSphereSource> maxSource = vtkSmartPointer<vtkSphereSource>::New();
-    //         maxSource->SetCenter(MaxX, MaxY, MaxZ);
-    //         maxSource->SetThetaResolution(64);
-    //         maxSource->SetPhiResolution(64);
-    //         maxSource->SetRadius(sphereRadius);
-    //         maxSource->Update();
-    //         vtkSmartPointer<vtkPolyDataMapper> maxMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    //         maxMapper->SetInputData(maxSource->GetOutput());
-    //         vtkSmartPointer<vtkActor> maxActor = vtkSmartPointer<vtkActor>::New();
-    //         maxActor->SetMapper(maxMapper);
-    //         maxActor->GetProperty()->SetColor(1.0,0.0,0.0);
-    //         maxSpheres.push_back(maxActor);
-    //
-    //         vtkSmartPointer<vtkSphereSource> minSource = vtkSmartPointer<vtkSphereSource>::New();
-    //         minSource->SetCenter(MinX, MinY, MinZ);
-    //         minSource->SetThetaResolution(64);
-    //         minSource->SetPhiResolution(64);
-    //         minSource->SetRadius(sphereRadius);
-    //         minSource->Update();
-    //         vtkSmartPointer<vtkPolyDataMapper> minMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    //         minMapper->SetInputData(minSource->GetOutput());
-    //         vtkSmartPointer<vtkActor> minActor = vtkSmartPointer<vtkActor>::New();
-    //         minActor->SetMapper(minMapper);
-    //         minActor->GetProperty()->SetColor(0.0,0.0,1.0);
-    //         minSpheres.push_back(minActor);
-    //     }
-    // }
-
-     // Define viewport ranges
+    // Define viewport ranges
     double xmins[4] = {0,.5,0,.5};
     double xmaxs[4] = {0.5,1,0.5,1};
     double ymins[4] = {0,0,.5,.5};
     double ymaxs[4]= {0.5,0.5,1,1};
-    double camera_views[4][3] = {{-1.0,0.0,0.0},{-1.0,-0.70,-0.7},{0.0,0.0,-1.0},{0.0,-1.0,0.0}};
-    double camera_viewUp[4][3] = {{0.0,-1.0,0.0},{0.0,-1.0,0.0},{0.0,-1.0,0.0},{0.0,1.0,0.0}};
+    double camera_views[4][3] = {{-1.0,0.0,0.0},{-1.0,0.70,0.7},{0.0,0.0,-1.0},{0.0,-1.0,0.0}};
+    double camera_viewUp[4][3] = {{0.0,1.0,0.0},{0.0,1.0,0.0},{0.0,1.0,0.0},{0.0,-1.0,0.0}};
     vtkSmartPointer<vtkRenderWindow> renderWindow =  vtkSmartPointer<vtkRenderWindow>::New();
 
     for(unsigned i = 0; i < 4; i++)
