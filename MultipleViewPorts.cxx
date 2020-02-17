@@ -10,26 +10,41 @@
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
 
+#include <vtkActor.h>
 #include <vtkCamera.h>
+#include <vtkCellData.h>
+#include <vtkDataArray.h>
+#include <vtkDataSetMapper.h>
 #include <vtkFloatArray.h>
 #include <vtkImageReader2Factory.h>
 #include <vtkJPEGReader.h>
+#include <vtkOBJReader.h>
 #include <vtkPLYReader.h>
 #include <vtkPNGWriter.h>
 #include <vtkPointData.h>
+#include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
 #include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
 #include <vtkRenderer.h>
+#include <vtkSmartPointer.h>
 #include <vtkSphereSource.h>
 #include <vtkTexture.h>
+#include <vtkUnstructuredGridReader.h>
 #include <vtkWindowToImageFilter.h>
 
 #include "include/tinyply.h"
 using namespace tinyply;
 
+struct uint3 {
+  uint32_t v1, v2, v3;
+};
 struct float2 {
   float u, v;
+};
+struct float6 {
+  float u1, v1, u2, v2, u3, v3;
 };
 
 Json::Value getConfig(const char *inputFile);
@@ -70,7 +85,7 @@ int main(int argc, char *argv[]) {
   if (argc < 5 || argc > 6) {
     std::cout << "Usage: " << argv[0] << "  meshFile(.ply)"
               << "   textureFile(.jpg/.png)"
-              << "   output.json"
+              << "   datFile(.dat)"
               << "   outputImage(.jpg/.png)"
               << "   magnification(optional)" << std::endl;
     return EXIT_FAILURE;
@@ -78,11 +93,11 @@ int main(int argc, char *argv[]) {
 
   std::string inputFileName = argv[1];
   std::string inputImageName = argv[2];
+  // std::string inputDatName = argv[3];
   std::string outputImageName = argv[4];
   float magnification = 2.0;
-  if (argc == 6) {
+  if (argc == 6)
     magnification = std::max(4.0, atof(argv[5]));
-  }
 
   // mesh file
   std::string ext = inputFileName.substr(inputFileName.find_last_of(".") + 1);
@@ -200,12 +215,10 @@ int main(int argc, char *argv[]) {
   double xmaxs[4] = {0.5, 1, 0.5, 1};
   double ymins[4] = {0, 0, .5, .5};
   double ymaxs[4] = {0.5, 0.5, 1, 1};
-  double camera_views[4][3] = {{-1.0, 0.0, 0.0},
-                               {-1.0, -0.70, -0.7},
-                               {0.0, 0.0, -1.0},
-                               {0.0, -1.0, 0.0}};
+  double camera_views[4][3] = {
+      {-1.0, 0.0, 0.0}, {-1.0, 0.70, 0.7}, {0.0, 0.0, -1.0}, {0.0, -1.0, 0.0}};
   double camera_viewUp[4][3] = {
-      {0.0, -1.0, 0.0}, {0.0, -1.0, 0.0}, {0.0, -1.0, 0.0}, {0.0, 1.0, 0.0}};
+      {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, -1.0, 0.0}};
   vtkSmartPointer<vtkRenderWindow> renderWindow =
       vtkSmartPointer<vtkRenderWindow>::New();
 
