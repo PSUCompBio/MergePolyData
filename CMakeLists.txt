@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 PROJECT(MergePolyData)
 
 find_package(VTK REQUIRED)
+include_directories(${VTK_INCLUDE_DIRS})
 
 #include_directories(include)
 #Add external packages and headers
