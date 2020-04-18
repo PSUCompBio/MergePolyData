@@ -19,7 +19,7 @@ link_directories(${binary_dir}/src/lib_json)
 
 add_executable(MergePolyData MACOSX_BUNDLE include/vtkCleanUnstructuredGrid.h vtkCleanUnstructuredGrid.cxx MergePolyData.cxx )
 add_executable(ImageCapture MACOSX_BUNDLE include/tinyply.h  tinyply.cxx ImageCapture.cxx)
-add_executable(Quad2Hex MACOSX_BUNDLE Quad2Hex.cxx )
+add_executable(Quad2Hex MACOSX_BUNDLE include/vtkCleanUnstructuredGridCells.h vtkCleanUnstructuredGridCells.cxx Quad2Hex.cxx )
 add_executable(MultipleViewPorts MACOSX_BUNDLE include/tinyply.h  tinyply.cxx MultipleViewPorts.cxx )
 ADD_DEPENDENCIES(MultipleViewPorts JsonCpp)
 

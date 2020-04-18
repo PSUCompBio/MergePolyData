@@ -5,6 +5,7 @@
 #include <set>
 #include <algorithm>
 
+#include <vtkAppendFilter.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkUnstructuredGridReader.h>
 #include <vtkUnstructuredGridWriter.h>
@@ -18,6 +19,8 @@
 #include <vtkPolyData.h>
 #include <vtkIdList.h>
 #include <vtkMath.h>
+
+#include "include/vtkCleanUnstructuredGridCells.h"
 
 double* GetCellNormal(vtkSmartPointer<vtkPolyData> polyData, std::vector<vtkIdType> cellPoints)
 {
@@ -341,6 +344,7 @@ int main(int argc, char *argv[])
 			}
 
 			vtkIdType foundCell = FindCommonCell(allCellNeighs);
+			// std::cout<<"Found cell :"<<foundCell<<std::endl;
 
 			std::vector<vtkIdType> cell1Ids = GetCellPointIds(pData, cellId);
 			// std::vector<vtkIdType> cell2Ids = GetCellPointIds(pData, foundCell);
@@ -360,7 +364,12 @@ int main(int argc, char *argv[])
 			 //remove cells to prevent duplication
 			selectedCells.insert(selectedCells.end(), allCells.begin(), allCells.end());
 			selectedCells.push_back(cellId);
-			selectedCells.push_back(foundCell);
+			
+			// excluding the found cell causes holes
+			// let them create overlaping cells
+			// clean them later
+
+			// selectedCells.push_back(foundCell);
 
 			facePair.push_back(std::pair<vtkIdType, vtkIdType>(cellId, foundCell));
 			hexIdLists.push_back(idList);
@@ -369,10 +378,19 @@ int main(int argc, char *argv[])
 	}
 
 	vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, hexIdLists);
+	
+	vtkSmartPointer<vtkAppendFilter> pAppend = vtkSmartPointer<vtkAppendFilter>::New();
+	pAppend->AddInputData(ug);
+	pAppend->Update();
+
+	vtkSmartPointer<vtkCleanUnstructuredGridCells> pGridCellsCleaner = vtkSmartPointer<vtkCleanUnstructuredGridCells>::New();
+	pGridCellsCleaner->AddInputData(pAppend->GetOutput());
+	pGridCellsCleaner->Update();
+	vtkSmartPointer<vtkUnstructuredGrid> pCleanedGridCells = pGridCellsCleaner->GetOutput();
 
 	// Write to out file
 	vtkSmartPointer<vtkUnstructuredGridWriter> writter = vtkSmartPointer<vtkUnstructuredGridWriter>::New();
-	writter->SetInputData(ug);
+	writter->SetInputData(pCleanedGridCells);
 	writter->SetFileName(outputFilename.c_str());
 	writter->Write();
 	std::cout << "Written to : " << outputFilename << std::endl;
