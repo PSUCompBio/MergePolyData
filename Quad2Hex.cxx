@@ -172,7 +172,7 @@ vtkIdType FindOppositeCellPointId(std::vector<std::vector<vtkIdType>> allCellPoi
 
 	if (inter.size() > 1)
 	{
-	std::cout<<"Error : Couldnt find the Opposite cell point\n";
+	return -1;
 	}
 
 	return inter[0];
@@ -212,44 +212,47 @@ int main(int argc, char *argv[])
 	reader->SetFileName(inputFilename.c_str());
 	reader->Update();
 	vtkSmartPointer<vtkPolyData> pData = reader->GetOutput();
+	vtkSmartPointer<vtkCleanPolyData> pInputCleaner = vtkSmartPointer<vtkCleanPolyData>::New();
+	pInputCleaner->SetInputData(pData);
+	pInputCleaner->Update();
+	pData = pInputCleaner->GetOutput();
 	vtkSmartPointer<vtkCellData> pCellData = pData->GetCellData();
 
 	vtkIdType nCells = pData->GetNumberOfCells();
 	std::vector< vtkIdType> cellIds;
 	for (vtkIdType c = 0; c < nCells; c++)
 	{
+		vtkCell * pCell = pData->GetCell(c);
+		int cellType = pCell->GetCellType();
+		if(cellType != VTK_QUAD)
+			std::cout<<"!! Warning a cell not Quad type found\n";
 		cellIds.push_back(c);
 	}
 
 	std::cout<<"Number of cells "<<nCells<<"\n";
 	std::vector<std::pair<vtkIdType, vtkIdType>> facePair;
 	std::vector<vtkSmartPointer<vtkIdList>> hexIdLists;
-	std::vector<vtkIdType> selectedCells;
+
+	bool bFound = false;
+	vtkIdType foundCell = -1;
 	for (vtkIdType c = 0; c < cellIds.size(); c++)
 	{
 		vtkIdType cellId = cellIds[c];
-
-		if (std::find(selectedCells.begin(), selectedCells.end(), cellId) != selectedCells.end())
-			continue;
 
 		std::vector<vtkIdType> CijPointIds = GetCellPointIds(pData, cellId);
 		double* cellNormal = GetCellNormal(pData, CijPointIds);
 
 		std::vector<vtkIdType> neighbors = GetNeighbours(pData, cellId);
 		std::map<vtkIdType, std::vector<vtkIdType>> mapCellPnts;
-		std::map<double, vtkIdType> sortedNeighbours;
 		for (int n = 0; n < neighbors.size(); n++)
 		{
-			std::vector<vtkIdType> neighPointIds = GetCellPointIds(pData, neighbors[n]);
-			double* normal = GetCellNormal(pData, neighPointIds);
-			double dotProd = abs(vtkMath::Dot(cellNormal, normal));
-			sortedNeighbours[dotProd] = neighbors[n];
+			std::vector<vtkIdType> neighPointIds = GetCellPointIds(pData, neighbors[n]);			
 			mapCellPnts[neighbors[n]] = neighPointIds;
 		}
 
-		for (auto it : sortedNeighbours)
+		for (auto aNeighbour : neighbors)
 		{
-			vtkIdType C1 = it.second;
+			vtkIdType C1 = aNeighbour;
 			std::vector<vtkIdType> C1PointIds = GetCellPointIds(pData, C1);
 			std::vector<vtkIdType> filteredNeigh = neighbors;
 			filteredNeigh.erase(std::remove(filteredNeigh.begin(), filteredNeigh.end(), C1), filteredNeigh.end());
@@ -343,11 +346,9 @@ int main(int argc, char *argv[])
 				allCellNeighs.push_back(aNeighs);
 			}
 
-			vtkIdType foundCell = FindCommonCell(allCellNeighs);
-			// std::cout<<"Found cell :"<<foundCell<<std::endl;
+			foundCell = FindCommonCell(allCellNeighs);
 
 			std::vector<vtkIdType> cell1Ids = GetCellPointIds(pData, cellId);
-			// std::vector<vtkIdType> cell2Ids = GetCellPointIds(pData, foundCell);
 			std::vector<std::vector<vtkIdType>> allCellPointIds = { C1PointIds, C2PointIds, C3PointIds, C4PointIds };
 
 			vtkSmartPointer<vtkIdList> idList = vtkSmartPointer<vtkIdList>::New();
@@ -355,36 +356,38 @@ int main(int argc, char *argv[])
 			{
 				idList->InsertNextId(cell1Ids[i]);
 			}
+			
+			bool bOppNotFound = false;
 			for(int i=0; i<cell1Ids.size(); i++)
 			{
 				vtkIdType oppPointId = FindOppositeCellPointId(allCellPointIds, cell1Ids[i]);
-				idList->InsertNextId(oppPointId);
+				if (oppPointId != -1)
+				{
+					idList->InsertNextId(oppPointId);
+				}
+				else
+				{
+					bOppNotFound = true;
+					break;
+				}
 			}
-			
-			 //remove cells to prevent duplication
-			selectedCells.insert(selectedCells.end(), allCells.begin(), allCells.end());
-			selectedCells.push_back(cellId);
-			
-			// excluding the found cell causes holes
-			// let them create overlaping cells
-			// clean them later
-
-			// selectedCells.push_back(foundCell);
+			if (bOppNotFound == true)
+				continue;
 
 			facePair.push_back(std::pair<vtkIdType, vtkIdType>(cellId, foundCell));
 			hexIdLists.push_back(idList);
+			bFound = true;
 			break;
 		}
-	}
+
+		if(bFound == false)
+			std::cout<<"!! Warning cell pair not found for cell "<<cellId<<std::endl;			
+	}	
 
 	vtkSmartPointer<vtkUnstructuredGrid> ug = BuildHexElements(pData, hexIdLists);
-	
-	vtkSmartPointer<vtkAppendFilter> pAppend = vtkSmartPointer<vtkAppendFilter>::New();
-	pAppend->AddInputData(ug);
-	pAppend->Update();
 
 	vtkSmartPointer<vtkCleanUnstructuredGridCells> pGridCellsCleaner = vtkSmartPointer<vtkCleanUnstructuredGridCells>::New();
-	pGridCellsCleaner->AddInputData(pAppend->GetOutput());
+	pGridCellsCleaner->AddInputData(ug);
 	pGridCellsCleaner->Update();
 	vtkSmartPointer<vtkUnstructuredGrid> pCleanedGridCells = pGridCellsCleaner->GetOutput();
 
