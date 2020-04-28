@@ -377,7 +377,6 @@ int main(int argc, char *argv[])
 			facePair.push_back(std::pair<vtkIdType, vtkIdType>(cellId, foundCell));
 			hexIdLists.push_back(idList);
 			bFound = true;
-			break;
 		}
 
 		if(bFound == false)
