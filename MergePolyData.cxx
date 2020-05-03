@@ -34,7 +34,7 @@ void AddAttributeToCells(vtkSmartPointer<vtkUnstructuredGrid> pGrid,
   // Setup index array
   vtkSmartPointer<vtkIntArray> indexArray = vtkSmartPointer<vtkIntArray>::New();
   indexArray->SetNumberOfComponents(1);
-  indexArray->SetName("Part ID");
+  indexArray->SetName("PartID");
   int partId = 0;
   for (vtkIdType i = 0; i < pGrid->GetNumberOfCells(); i++) {
     if (i < pCellCounts->GetId(partId)) {
