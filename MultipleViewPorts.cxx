@@ -82,11 +82,12 @@ std::vector<float2> readTexCoordsFromPLYFile(const std::string &filepath) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 5 || argc > 6) {
+  if (argc < 6 || argc > 7) {
     std::cout << "Usage: " << argv[0] << "  meshFile(.ply)"
               << "   textureFile(.jpg/.png)"
-              << "   datFile(.dat)"
+              << "   jsonFile(.json)"
               << "   outputImage(.jpg/.png)"
+	      << "   elementcentresfile(.txt)"
               << "   magnification(optional)" << std::endl;
     return EXIT_FAILURE;
   }
@@ -96,8 +97,8 @@ int main(int argc, char *argv[]) {
   // std::string inputDatName = argv[3];
   std::string outputImageName = argv[4];
   float magnification = 2.0;
-  if (argc == 6)
-    magnification = std::max(4.0, atof(argv[5]));
+  if (argc == 7)
+    magnification = std::max(4.0, atof(argv[6]));
 
   // mesh file
   std::string ext = inputFileName.substr(inputFileName.find_last_of(".") + 1);
@@ -166,20 +167,44 @@ int main(int argc, char *argv[]) {
     std::cout << "Not a ply file \n";
   }
 
-  // dat file
+  // json file
   Json::Value outputJson = getConfig(argv[3]);
   std::vector<vtkSmartPointer<vtkActor>> maxSpheres;
   std::vector<vtkSmartPointer<vtkActor>> minSpheres;
   float sphereRadius = (bounds[1] - bounds[0]) / 25.0;
-
   float MaxX, MaxY, MaxZ, MinX, MinY, MinZ;
-  MaxX = outputJson["principal-max-strain"]["location"][0].asDouble();
-  MaxY = outputJson["principal-max-strain"]["location"][1].asDouble();
-  MaxZ = outputJson["principal-max-strain"]["location"][2].asDouble();
-  MinX = outputJson["principal-min-strain"]["location"][0].asDouble();
-  MinY = outputJson["principal-min-strain"]["location"][1].asDouble();
-  MinZ = outputJson["principal-min-strain"]["location"][2].asDouble();
+  int maxid, minid;
+  maxid = outputJson["principal-max-strain"]["global-element-id"].asInt();
+  minid = outputJson["principal-min-strain"]["global-element-id"].asInt();
 
+  // file containing centres of elements
+  int id;
+  float x,y,z;
+  FILE *centres;
+  centres = fopen(argv[5], "r");
+  if(centres == NULL)
+  {
+	  printf("Error opening cell centres file\n");
+	  exit(1);
+  }
+  while(fscanf(centres,"%d %f %f %f", &id, &x, &y, &z)!=EOF)
+  {
+	 if(id == maxid)
+	{
+		MaxX = x;
+		MaxY = y;
+		MaxZ = z;
+	}
+	if(id == minid)
+	{
+		MinX = x;
+		MinY = y;
+		MinZ = z;
+	}
+
+  }
+  fclose(centres);
+ 
   vtkSmartPointer<vtkSphereSource> maxSource =
       vtkSmartPointer<vtkSphereSource>::New();
   maxSource->SetCenter(MaxX, MaxY, MaxZ);
@@ -216,9 +241,9 @@ int main(int argc, char *argv[]) {
   double ymins[4] = {0, 0, .5, .5};
   double ymaxs[4] = {0.5, 0.5, 1, 1};
   double camera_views[4][3] = {
-      {-1.0, 0.0, 0.0}, {-1.0, 0.70, 0.7}, {0.0, 0.0, -1.0}, {0.0, -1.0, 0.0}};
+      {-1.0, 0.0, 0.0}, {-1.0, -0.70, -0.7}, {0.0, 0.0, -1.0}, {0.0, -1.0, 0.0}};
   double camera_viewUp[4][3] = {
-      {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, -1.0, 0.0}};
+      {0.0, -1.0, 0.0}, {0.0, -1.0, 0.0}, {0.0, -1.0, 0.0}, {0.0, 1.0, 0.0}};
   vtkSmartPointer<vtkRenderWindow> renderWindow =
       vtkSmartPointer<vtkRenderWindow>::New();
 
