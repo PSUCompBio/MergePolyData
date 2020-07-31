@@ -173,6 +173,7 @@ int main(int argc, char *argv[]) {
   std::vector<vtkSmartPointer<vtkActor>> minSpheres;
   float sphereRadius = (bounds[1] - bounds[0]) / 25.0;
   float MaxX, MaxY, MaxZ, MinX, MinY, MinZ;
+  std::string Maxregion, Minregion;
   int maxid, minid;
   maxid = outputJson["principal-max-strain"]["global-element-id"].asInt();
   minid = outputJson["principal-min-strain"]["global-element-id"].asInt();
@@ -180,6 +181,7 @@ int main(int argc, char *argv[]) {
   // file containing centres of elements
   int id;
   float x,y,z;
+  std::string region;
   FILE *centres;
   centres = fopen(argv[5], "r");
   if(centres == NULL)
@@ -187,19 +189,21 @@ int main(int argc, char *argv[]) {
 	  printf("Error opening cell centres file\n");
 	  exit(1);
   }
-  while(fscanf(centres,"%d %f %f %f", &id, &x, &y, &z)!=EOF)
+  while(fscanf(centres,"%d %f %f %f %s", &id, &x, &y, &z, region.c_str())!=EOF)
   {
 	 if(id == maxid)
 	{
 		MaxX = x;
 		MaxY = y;
 		MaxZ = z;
+		Maxregion = region.c_str();
 	}
 	if(id == minid)
 	{
 		MinX = x;
 		MinY = y;
 		MinZ = z;
+		Minregion = region.c_str();
 	}
 
   }
