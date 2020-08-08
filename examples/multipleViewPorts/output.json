@@ -1,4 +1,15 @@
 {
+  "brain-volume" : 0.00090246700965842294,
+  "center-of-mass" : [ 0.0, 0.0, 0.0 ],
+  "csdm-15" : 0.0,
+  "csdm-30" : 0.0,
+  "maximum-PSxSR" : 
+  {
+    "global-element-id" : 13120,
+    "location" : [ -0.016183999999999997, 0.053556000000000006, 0.0098200000000000006 ],
+    "time" : 0.028789406186620542,
+    "value" : 0.00012283665557204332
+  },
   "maximum-shear-strain" :
   {
     "global-element-id" : 13120,
