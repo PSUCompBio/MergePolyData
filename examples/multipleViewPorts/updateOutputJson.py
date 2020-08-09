@@ -8,7 +8,7 @@ outputJson = json.loads(open(jsonOutputFile).read())
 
 # Populate region from cell centres file
 injuryMetrics = ["principal-max-strain", "principal-min-strain",
-        "maximum-shear-strain"];
+        "maximum-shear-strain", "maximum-PSxSR"];
 for metric in injuryMetrics:
     maxLocation = int(outputJson[metric]["global-element-id"])
     maxLine = linecache.getline('cellcentres.txt', maxLocation).split()
