@@ -160,4 +160,5 @@ int main(int argc, char *argv[]) {
     ExportAsAbaqusFile(pMergedGrid, pCellCounts, abaqusFilename);
     std::cout << "Written Abaqus inp file : " << abaqusFilename << std::endl;
   }
+  return 0;
 }

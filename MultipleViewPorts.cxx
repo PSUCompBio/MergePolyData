@@ -83,12 +83,11 @@ std::vector<float2> readTexCoordsFromPLYFile(const std::string &filepath) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 6 || argc > 7) {
+  if (argc < 5 || argc > 6) {
     std::cout << "Usage: " << argv[0] << "  meshFile(.ply)"
               << "   textureFile(.jpg/.png)"
               << "   jsonFile(.json)"
               << "   outputImage(.jpg/.png)"
-	      << "   elementcentresfile(.txt)"
               << "   magnification(optional)" << std::endl;
     return EXIT_FAILURE;
   }
@@ -99,7 +98,7 @@ int main(int argc, char *argv[]) {
   std::string outputImageName = argv[4];
   float magnification = 2.0;
   if (argc == 7)
-    magnification = std::max(4.0, atof(argv[6]));
+    magnification = std::max(4.0, atof(argv[5]));
 
   // mesh file
   std::string ext = inputFileName.substr(inputFileName.find_last_of(".") + 1);
@@ -174,42 +173,11 @@ int main(int argc, char *argv[]) {
   std::vector<vtkSmartPointer<vtkActor>> minSpheres;
   float sphereRadius = (bounds[1] - bounds[0]) / 25.0;
   float MaxX, MaxY, MaxZ, MinX, MinY, MinZ;
-  std::string Maxregion, Minregion;
-  int maxid, minid;
-  maxid = outputJson["principal-max-strain"]["global-element-id"].asInt();
-  minid = outputJson["principal-min-strain"]["global-element-id"].asInt();
+  Json::Value maxid = outputJson["principal-max-strain"]["location"];
+  Json::Value minid = outputJson["principal-min-strain"]["location"];
+  MaxX = maxid[0].asDouble(); MaxY = maxid[1].asDouble(); MaxZ = maxid[2].asDouble();
+  MinX = minid[0].asDouble(); MinY = minid[1].asDouble(); MinZ = minid[2].asDouble();
 
-  // file containing centres of elements
-  int id;
-  float x,y,z;
-  std::string region;
-  FILE *centres;
-  centres = fopen(argv[5], "r");
-  if(centres == NULL)
-  {
-	  printf("Error opening cell centres file\n");
-	  exit(1);
-  }
-  while(fscanf(centres,"%d %f %f %f %s", &id, &x, &y, &z, region.c_str())!=EOF)
-  {
-	 if(id == maxid)
-	{
-		MaxX = x;
-		MaxY = y;
-		MaxZ = z;
-		Maxregion = region.c_str();
-	}
-	if(id == minid)
-	{
-		MinX = x;
-		MinY = y;
-		MinZ = z;
-		Minregion = region.c_str();
-	}
-
-  }
-  fclose(centres);
- 
   vtkSmartPointer<vtkSphereSource> maxSource =
       vtkSmartPointer<vtkSphereSource>::New();
   maxSource->SetCenter(MaxX, MaxY, MaxZ);
