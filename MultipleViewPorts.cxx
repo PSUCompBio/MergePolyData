@@ -7,7 +7,8 @@
 #include "json/json.h"
 
 #include "vtkAutoInit.h"
-VTK_MODULE_INIT(vtkRenderingOpenGL2);
+VTK_MODULE_INIT(vtkRenderingOpenGL);
+//VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
 
 #include <vtkActor.h>
