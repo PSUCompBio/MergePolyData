@@ -8,7 +8,7 @@
 #include <vtkIntArray.h>
 #include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
-#include <vtkUnstructuredGridReader.h>
+#include <vtkXMLUnstructuredGridReader.h>
 
 int main(int argc, char *argv[]) {
   std::string inputFile;
@@ -37,8 +37,8 @@ int main(int argc, char *argv[]) {
   }
 
   cout << "Reading file " << inputFile << endl;
-  vtkSmartPointer<vtkUnstructuredGridReader> reader =
-      vtkSmartPointer<vtkUnstructuredGridReader>::New();
+  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader =
+      vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
   reader->SetFileName(inputFile.c_str());
   reader->Update();
   vtkSmartPointer<vtkUnstructuredGrid> pUnstructedGrid =
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
          << "\n";
   }
   int nCells = pUnstructedGrid->GetNumberOfCells();
-  std::string arrayName = "PartID";
+  std::string arrayName = "Part ID";
   vtkSmartPointer<vtkIntArray> partArray = dynamic_cast<vtkIntArray *>(
       pUnstructedGrid->GetCellData()->GetArray(arrayName.c_str()));
 
